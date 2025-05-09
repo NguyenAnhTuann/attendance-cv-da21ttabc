@@ -8,20 +8,20 @@ if not os.path.exists('../db'):
 conn = sqlite3.connect('../db/attendance.db')
 cursor = conn.cursor()
 
-#  bảng snh viên
+#  bảng sinh viên
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS sinhvien (
-    ma_sv TEXT PRIMARY KEY,
-    ho_ten TEXT
+    mssv TEXT PRIMARY KEY,
+    hoten TEXT
 )
 ''')
 
 # bảng điểm danh
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS diemdanh (
-    ma_sv TEXT,
-    ngay_hoc DATE,
-    FOREIGN KEY(ma_sv) REFERENCES sinhvien(ma_sv)
+    mssv TEXT,
+    ngayhoc DATE,
+    FOREIGN KEY(mssv) REFERENCES sinhvien(mssv)
 )
 ''')
 
