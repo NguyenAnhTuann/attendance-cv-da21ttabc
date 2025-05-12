@@ -12,20 +12,21 @@ Dự án **Điểm danh lớp DA21TTABC bằng nhận diện khuôn mặt** sử
 - Visual Studio Code (môi trường phát triển)
 
 ## 🗂️ Cấu trúc thư mục
+```plaintext
 attendance-cv-da21ttabc/
-├── .vscode/ # Cấu hình VSCode (optional)
+├── .vscode/                 # Cấu hình VSCode (optional)
 ├── db/
-│ └── attendance.db # Database SQLite lưu thông tin sinh viên & điểm danh
+│   └── attendance.db        # Database SQLite lưu thông tin sinh viên & điểm danh
 ├── src/
-│ ├── luu/ # Lưu trữ ảnh khuôn mặt đã quét (ignored by .gitignore)
-│ ├── credentials.json # Thông tin OAuth Google Drive API (ignored)
-│ ├── token.pickle # Token đăng nhập Google Drive API (ignored)
-│ ├── haarcascade_frontalface_default.xml # Mô hình nhận diện khuôn mặt HaarCascade
-│ ├── db.py # Quản lý thao tác database
-│ ├── GetDatabase.py # Xử lý kết nối Google Drive & upload ảnh
-│ └── main.py # Chương trình chính (quét khuôn mặt & upload)
-├── .gitignore # Danh sách file/folder không đưa lên git
-├── README.md # Tài liệu dự án
+│   ├── luu/                 # Lưu trữ ảnh khuôn mặt đã quét (ignored by .gitignore)
+│   ├── credentials.json     # Thông tin OAuth Google Drive API (ignored)
+│   ├── token.pickle         # Token đăng nhập Google Drive API (ignored)
+│   ├── haarcascade_frontalface_default.xml # Mô hình nhận diện khuôn mặt HaarCascade
+│   ├── db.py                # Quản lý thao tác database
+│   ├── GetDatabase.py       # Xử lý kết nối Google Drive & upload ảnh
+│   └── main.py              # Chương trình chính (quét khuôn mặt & upload)
+├── .gitignore               # Danh sách file/folder không đưa lên git
+├── README.md                # Tài liệu dự án
 
 ## 🚀 Chức năng chính
 - ✅ Nhận diện khuôn mặt qua webcam & lưu ảnh
