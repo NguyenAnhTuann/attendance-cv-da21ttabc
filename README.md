@@ -27,7 +27,7 @@ attendance-cv-da21ttabc/
 │   └── main.py              # Chương trình chính (quét khuôn mặt & upload)
 ├── .gitignore               # Danh sách file/folder không đưa lên git
 ├── README.md                # Tài liệu dự án
-
+```
 ## 🚀 Chức năng chính
 - ✅ Nhận diện khuôn mặt qua webcam & lưu ảnh
 - ✅ Tạo thư mục riêng trên Google Drive theo từng buổi quét
