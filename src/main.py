@@ -6,11 +6,10 @@ import json
 import pandas as pd
 from datetime import datetime
 
-# ====== CẤU HÌNH ======
 model_path = "model.yml"
 label_map_path = "label_map.json"
 
-# ====== CHỌN MÔN HỌC ======
+# chon mon can diem danh
 mon_list = [
     "Thị Giác Máy Tính",
     "Hệ Thống Thông Tin Quản Lý",
@@ -22,8 +21,7 @@ for i, mon in enumerate(mon_list, 1):
 chon = int(input("Nhập số: "))
 monhoc = mon_list[chon - 1]
 
-# ====== CHỌN LỚP TỪ FILE EXCEL ======
-# ====== CHỌN FILE LỚP TỪ DANH SÁCH TRONG THƯ MỤC ======
+# chon lop
 folder_path = "data-da21ttabc"
 excel_files = [f for f in os.listdir(folder_path) if f.endswith(".xlsx")]
 
@@ -42,13 +40,12 @@ df_lop = pd.read_excel(excel_path)
 print(f"📋 Đã tải lớp từ: {excel_path}, tổng số sinh viên: {len(df_lop)}")
 
 
-# ====== NHẬP GIỜ BẮT ĐẦU BUỔI HỌC ======
+# gio bat dau & ket thuc buoi hoc
 thoigian_buoi_hoc = input("🕗 Nhập thời gian buổi học (hh:mm - hh:mm): ")
 start_str, end_str = [t.strip() for t in thoigian_buoi_hoc.split("-")]
 start_time = datetime.strptime(start_str, "%H:%M")
 end_time = datetime.strptime(end_str, "%H:%M")
 
-# ====== LOAD MÔ HÌNH VÀ MAPPING ======
 recognizer = cv2.face.LBPHFaceRecognizer_create()
 recognizer.read(model_path)
 with open(label_map_path, 'r') as f:
@@ -57,9 +54,9 @@ with open(label_map_path, 'r') as f:
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 cam = cv2.VideoCapture(0)
 font = cv2.FONT_HERSHEY_SIMPLEX
-recognized_ids = set()  # để tránh điểm danh trùng
+recognized_ids = set()  # tranh diem danh trung
 
-# ====== QUÉT KHUÔN MẶT ======
+
 while True:
     ret, frame = cam.read()
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -77,10 +74,8 @@ while True:
                 today = now.strftime('%d/%m/%Y')
                 current_time = now.strftime('%H:%M:%S')
 
-                # Tính trạng thái vào lớp
                 gio_vao = datetime.strptime(current_time[:5], "%H:%M")
 
-                # Nếu đến sau giờ kết thúc -> không cho điểm danh
                 if gio_vao > end_time:
                     print(f"⚠ MSSV: {mssv} đến sau giờ kết thúc ({end_str}) ❌ Không điểm danh")
                     continue
@@ -89,7 +84,6 @@ while True:
                 delay = int((gio_vao - start_time).total_seconds() // 60)
                 trangthai = "Đúng giờ" if delay <= 0 else f"Trễ {delay} phút"
 
-                # Ghi vào cơ sở dữ liệu
                 conn = sqlite3.connect('../db/attendance.db')
                 cursor = conn.cursor()
 
@@ -107,7 +101,7 @@ while True:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
         else:
-            cv2.putText(frame, "Không nhận diện được!", (x, y - 10), font, 0.8, (0, 0, 255), 2)
+            cv2.putText(frame, "Unknow!", (x, y - 10), font, 0.8, (0, 0, 255), 2)
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
     cv2.imshow('Face Attendance', frame)
