@@ -14,19 +14,28 @@ Dự án **Điểm danh lớp DA21TTABC bằng nhận diện khuôn mặt** sử
 ## 🗂️ Cấu trúc thư mục
 ```plaintext
 attendance-cv-da21ttabc/
-├── .vscode/                 # Cấu hình VSCode (optional)
+├── .vscode/                         # Cấu hình cho VS Code (nếu cần)
 ├── db/
-│   └── attendance.db        # Database SQLite lưu thông tin sinh viên & điểm danh
+│   └── attendance.db                # CSDL SQLite lưu thông tin sinh viên & điểm danh
 ├── src/
-│   ├── luu/                 # Lưu trữ ảnh khuôn mặt đã quét (ignored by .gitignore)
-│   ├── credentials.json     # Thông tin OAuth Google Drive API (ignored)
-│   ├── token.pickle         # Token đăng nhập Google Drive API (ignored)
-│   ├── haarcascade_frontalface_default.xml # Mô hình nhận diện khuôn mặt HaarCascade
-│   ├── db.py                # Quản lý thao tác database
-│   ├── GetDatabase.py       # Xử lý kết nối Google Drive & upload ảnh
-│   └── main.py              # Chương trình chính (quét khuôn mặt & upload)
-├── .gitignore               # Danh sách file/folder không đưa lên git
-├── README.md                # Tài liệu dự án
+│   ├── __pycache__/                 # Tự động sinh bởi Python (có thể .gitignore)
+│   ├── data-da21ttabc/
+│   │   └── DA21TTA.xlsx             # File Excel danh sách lớp
+│   ├── luu/                         # Thư mục lưu ảnh khuôn mặt đã quét
+│   ├── credentials.json             # File chứng thực Google Drive API (bảo mật)
+│   ├── token.pickle                 # Token OAuth lưu phiên đăng nhập
+│   ├── haarcascade_frontalface_default.xml   # Mô hình Haar cascade nhận diện khuôn mặt
+│   ├── label_map.json               # Map ID nhận diện với MSSV
+│   ├── model.yml                    # File mô hình nhận diện đã huấn luyện
+│   ├── db.py                        # Tương tác DB cơ bản
+│   ├── function.py                  # Menu thêm/sửa/xóa sinh viên & điểm danh
+│   ├── GetDatabase.py               # Ghi dữ liệu khuôn mặt & upload ảnh lên Google Drive
+│   ├── main.py                      # Nhận diện khuôn mặt, điểm danh & lưu thông tin
+│   ├── thongke.py                   # Tạo báo cáo thống kê & biểu đồ Excel
+│   └── thongke_<mssv>.xlsx          # File kết quả xuất thống kê của sinh viên
+├── .gitignore                       # Bỏ qua các file: __pycache__, *.pyc, token.pickle, luu/
+├── README.md                        # Hướng dẫn sử dụng & cài đặt (nếu có)
+
 ```
 ## 🚀 Chức năng chính
 - ✅ Nhận diện khuôn mặt qua webcam & lưu ảnh
