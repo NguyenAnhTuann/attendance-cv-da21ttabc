@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime
 
 conn = sqlite3.connect('../db/attendance.db')
 cursor = conn.cursor()
@@ -12,22 +13,31 @@ def hienthisinhvien():
 def themsinhvien():
     mssv = input("Nhập MSSV: ")
     hoten = input("Nhập Họ Tên: ")
-    cursor.execute("INSERT INTO sinhvien (mssv, hoten) VALUES (?, ?)", (mssv, hoten))
+    malop = input("Nhập Mã lớp: ")
+    ngaysinh = input("Nhập ngày sinh (YYYY-MM-DD): ")
+    gioitinh = input("Nhập giới tính: ")
+    ngaytao = datetime.now().strftime('%d/%m/%Y')
+    solantruycap = 0
+
+    cursor.execute('''
+        INSERT INTO sinhvien (mssv, hoten, malop, ngaysinh, gioitinh, ngaytao, solantruycap)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (mssv, hoten, malop, ngaysinh, gioitinh, ngaytao, solantruycap))
     conn.commit()
-    print("Đã thêm sinh viên.")
+    print("✅ Đã thêm sinh viên.")
 
 def suasinhvien():
     mssv = input("Nhập MSSV cần sửa: ")
     hoten_moi = input("Nhập tên mới: ")
     cursor.execute("UPDATE sinhvien SET hoten = ? WHERE mssv = ?", (hoten_moi, mssv))
     conn.commit()
-    print("Đã sửa.")
+    print("✅ Đã sửa thông tin sinh viên.")
 
 def xoasinhvien():
     mssv = input("Nhập MSSV cần xóa: ")
     cursor.execute("DELETE FROM sinhvien WHERE mssv = ?", (mssv,))
     conn.commit()
-    print("Đã xóa.")
+    print("✅ Đã xóa sinh viên.")
 
 def hienthidiemdanh():
     cursor.execute("SELECT * FROM diemdanh")
@@ -37,18 +47,39 @@ def hienthidiemdanh():
 
 def themdiemdanh():
     mssv = input("Nhập MSSV điểm danh: ")
-    ngayhoc = input("Nhập ngày học (YYYY-MM-DD): ")
-    cursor.execute("INSERT INTO diemdanh (mssv, ngayhoc) VALUES (?, ?)", (mssv, ngayhoc))
+    thoigian = input("Nhập thời gian (HH:MM:SS): ")
+    ngayhoc_raw = input("Nhập ngày học (dd/mm/yyyy): ")
+    try:
+        ngayhoc = datetime.strptime(ngayhoc_raw.strip(), "%d/%m/%Y").strftime("%d/%m/%Y")
+    except ValueError:
+        print("❌ Định dạng ngày không hợp lệ. Vui lòng nhập đúng dd/mm/yyyy.")
+        return
+    monhoc = input("Nhập môn học: ")
+    trangthai = input("Nhập trạng thái vào lớp: ")
+
+    cursor.execute('''
+        INSERT INTO diemdanh (mssv, thoigian, ngayhoc, monhoc, trangthaivaolop)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (mssv, thoigian, ngayhoc, monhoc, trangthai))
     conn.commit()
-    print("Đã điểm danh.")
+    print("✅ Đã điểm danh.")
 
 def xoadiemdanh():
     mssv = input("Nhập MSSV cần xóa điểm danh: ")
-    ngayhoc = input("Nhập ngày học (YYYY-MM-DD): ")
-    cursor.execute("DELETE FROM diemdanh WHERE mssv = ? AND ngayhoc = ?", (mssv, ngayhoc))
-    conn.commit()
-    print("Đã xóa điểm danh.")
+    ngayhoc_raw = input("Nhập ngày học (dd/mm/yyyy): ")
+    monhoc = input("Nhập môn học: ")
 
+    try:
+        ngayhoc = datetime.strptime(ngayhoc_raw.strip(), "%d/%m/%Y").strftime("%d/%m/%Y")
+    except ValueError:
+        print("❌ Định dạng ngày không hợp lệ. Vui lòng nhập đúng dd/mm/yyyy.")
+        return
+
+    cursor.execute("DELETE FROM diemdanh WHERE mssv = ? AND ngayhoc = ? AND monhoc = ?", (mssv, ngayhoc, monhoc))
+    conn.commit()
+    print("✅ Đã xóa điểm danh.")
+
+# --- Menu ---
 while True:
     print("\n--- MENU ---")
     print("1. Thêm sinh viên")
@@ -58,6 +89,7 @@ while True:
     print("5. Thêm điểm danh")
     print("6. Hiển thị điểm danh")
     print("7. Xóa điểm danh")
+    print("8. Thống kê số buổi học của sinh viên")
     print("0. Thoát")
 
     choice = input("Chọn thao tác: ")
@@ -76,10 +108,12 @@ while True:
         hienthidiemdanh()
     elif choice == '7':
         xoadiemdanh()
+    elif choice == '8':
+        import thongke
     elif choice == '0':
-        print("Thoát chương trình.")
+        print("👋 Thoát chương trình.")
         break
     else:
-        print("Lựa chọn không hợp lệ.")
+        print("⚠ Lựa chọn không hợp lệ.")
 
 conn.close()

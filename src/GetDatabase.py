@@ -128,10 +128,24 @@ if __name__ == "__main__":
         delete_local_images(mssv)
 
     elif lua_chon == '1':
-        # Nếu đã nhập rồi thì chỉ cần hỏi MSSV và Họ tên để tạo folder + quét
         mssv = input('MSSV: ')
-        hoten = input('Họ tên: ')
+
+        # Tự động lấy họ tên từ CSDL
+        conn = sqlite3.connect('../db/attendance.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT hoten FROM sinhvien WHERE mssv = ?", (mssv,))
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            hoten = result[0]
+            print(f"✅ Đã tìm thấy tên sinh viên: {hoten}")
+        else:
+            print("❌ MSSV không tồn tại trong cơ sở dữ liệu.")
+            exit()
+
         hoten_filename = unidecode(hoten).replace(" ", "")
+
 
         # Xóa dữ liệu ảnh cũ (cả local và Google Drive)
         parent_folder_id = '1N1OTsq8waQurLzCNG6ZikzO-7x4yScwe'
