@@ -90,6 +90,7 @@ while True:
     print("6. Hiển thị điểm danh")
     print("7. Xóa điểm danh")
     print("8. Thống kê số buổi học của sinh viên")
+    print("9. Thống kê điểm danh lớp theo ngày")
     print("0. Thoát")
 
     choice = input("Chọn thao tác: ")
@@ -110,6 +111,9 @@ while True:
         xoadiemdanh()
     elif choice == '8':
         import thongke
+    elif choice == '9':
+        from thongke_tungngay import thongke_diemdanh_lop_theo_ngay
+        thongke_diemdanh_lop_theo_ngay()
     elif choice == '0':
         print("👋 Thoát chương trình.")
         break
