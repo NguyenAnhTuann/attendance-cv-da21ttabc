@@ -9,6 +9,12 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+import sys
+
+# Thiết lập stdin/stdout/stderr encoding sang utf-8
+sys.stdin.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
