@@ -1,109 +1,150 @@
+from flask import Flask, render_template, redirect, url_for, request, flash, Response
 import os
-import sys
-import tkinter as tk
-from tkinter import messagebox
-import subprocess
+import cv2
+from GetDatabase import handle_face_capture
 import threading
-from tkinter import scrolledtext, simpledialog
 
-# Đảm bảo console dùng UTF-8 để không lỗi khi nhập tiếng Việt
-if sys.platform == "win32":
-    import ctypes
-    ctypes.windll.kernel32.SetConsoleCP(65001)
-    ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+app = Flask(__name__)
+app.secret_key = "your_secret_key"  # dùng để hiển thị flash messages
 
-def laydulieu_khuonmat():
-    popup = tk.Toplevel(root)
-    popup.title("Lấy dữ liệu khuôn mặt")
-    popup.geometry("600x400")
+# ---------- TRANG CHỦ ----------
+@app.route('/')
+def home():
+    return render_template('trangchu.html')
 
-    txt = scrolledtext.ScrolledText(popup, width=70, height=20, state='disabled', wrap=tk.WORD)
-    txt.pack(padx=10, pady=10, fill='both', expand=True)
 
-    def append(text):
-        txt['state'] = 'normal'
-        txt.insert(tk.END, text)
-        txt.see(tk.END)
-        txt['state'] = 'disabled'
+# ---------- LẤY DỮ LIỆU KHUÔN MẶT ----------
+@app.route('/laydulieu', methods=['GET', 'POST'])
+def laydulieu():
+    if request.method == 'POST':
+        chon = request.form.get('chon')
+        try:
+            if chon == '1':
+                mssv = request.form['mssv_only']
+                handle_face_capture(mssv=mssv)
+                flash(f"✅ Đã lấy dữ liệu khuôn mặt thành công cho MSSV: {mssv}")
+                return render_template("laydulieu_full.html")
 
-    def run_script():
-        proc = subprocess.Popen(
-            ["python", "GetDatabase.py"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            stdin=subprocess.PIPE,
-            text=True,
-            bufsize=1
-        )
-        for line in proc.stdout:
-            append(line)
-            if "Chọn" in line:
-                choice = simpledialog.askstring("Lựa chọn", "Bạn đã nhập thông tin trước đó chưa? (1 hoặc 2)", parent=popup)
-                if choice:
-                    proc.stdin.write(choice + "\n")
-                    proc.stdin.flush()
-        proc.wait()
-        append(f"\n--- Hoàn tất với mã trả về: {proc.returncode} ---\n")
+            elif chon == '2':
+                mssv = request.form['mssv']
+                hoten = request.form['hoten']
+                ngaysinh = request.form['ngaysinh']
+                gioitinh = request.form['gioitinh']
+                malop = request.form['malop']
+                handle_face_capture(mssv, hoten, ngaysinh, gioitinh, malop)
+                flash(f"✅ Đã lấy dữ liệu khuôn mặt cho sinh viên mới: {hoten}")
+                return render_template("laydulieu_full.html")
 
-    threading.Thread(target=run_script, daemon=True).start()
+        except ValueError as e:
+            flash(str(e))
+            return render_template("laydulieu_full.html")
 
-def train_khuonmat():
-    model_path = "model.yml"
-    if os.path.exists(model_path):
-        os.remove(model_path)
-        messagebox.showinfo("Thông báo", "🗑️ Đã xoá model cũ.")
-    os.system("python train.py")
+    return render_template("laydulieu_full.html")
 
-def diemdanh_sinhvien():
-    os.system("python main.py")
 
-def quanly_file_lop():
-    folder = "data-da21ttabc"
-    files = [f for f in os.listdir(folder) if f.endswith(".xlsx")]
-    msg = "📂 Danh sách file lớp hiện có:\n" + "\n".join(files)
-    messagebox.showinfo("Danh sách lớp", msg)
+# ---------- STREAM VIDEO TỪ CAMERA ----------
+# camera = cv2.VideoCapture(0)
 
-    them = messagebox.askyesno("Thêm file", "📥 Bạn có muốn thêm file mới không?")
-    if them:
-        from tkinter import filedialog
-        duongdan = filedialog.askopenfilename(title="Chọn file Excel", filetypes=[("Excel files", "*.xlsx")])
-        if duongdan:
-            tenfile = os.path.basename(duongdan)
-            os.system(f'copy "{duongdan}" "{folder}\\{tenfile}"')
-            messagebox.showinfo("✅ Thành công", f"Đã thêm {tenfile} vào thư mục lớp.")
+camera = None  # Toàn cục
+
+def gen_frames():
+    global camera
+    if camera is None:
+        camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # Mở đúng lúc
+    while True:
+        if camera is None:
+            break
+        success, frame = camera.read()
+        if not success:
+            break
+        _, buffer = cv2.imencode('.jpg', frame)
+        frame = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        
+def gen_frames():
+    while True:
+        success, frame = camera.read()
+        if not success:
+            break
         else:
-            messagebox.showerror("❌ Lỗi", "File không tồn tại hoặc không chọn file.")
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            yield (
+                b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n'
+            )
 
-def thongke_chitiet_sinhvien():
+@app.route('/video_feed')
+def video_feed():
+    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+# ---------- CÁC CHỨC NĂNG KHÁC ----------
+@app.route('/train', methods=['GET', 'POST'])
+def train():
+    if request.method == 'POST':
+        model_path = "model.yml"
+        if os.path.exists(model_path):
+            os.remove(model_path)
+            print("🗑️ Đã xoá model cũ.")
+        os.system("python train.py")
+        flash("✅ Đã train lại dữ liệu khuôn mặt thành công.")
+        return render_template("train.html")
+
+    return render_template("train.html")
+
+# ---------- ---- ----------
+@app.route('/diemdanh', methods=['GET', 'POST'])
+def diemdanh():
+    folder = "data-da21ttabc"
+    excel_files = [f for f in os.listdir(folder) if f.endswith(".xlsx")]
+
+    if request.method == 'POST':
+        monhoc = request.form['monhoc']
+        filelop = request.form['filelop']
+        buoihoc = request.form['buoihoc']
+        start_end = {"Sáng": ("07:00", "10:30"), "Chiều": ("13:00", "16:30")}
+        start_str, end_str = start_end[buoihoc]
+
+        def run_diemdanh():
+            os.environ["MONHOC"] = monhoc
+            os.environ["FILELOP"] = filelop
+            os.environ["BUOIHOC"] = buoihoc
+            os.environ["START"] = start_str
+            os.environ["END"] = end_str
+            os.system("python diemdanhtheoweb.py")
+
+        threading.Thread(target=run_diemdanh).start()
+
+        return render_template("diemdanh.html", excel_files=excel_files)
+
+    return render_template("diemdanh.html", excel_files=excel_files)
+
+# ---------- ---- ----------
+
+@app.route('/quanly_file_lop')
+def quanly_file_lop():
+    os.system("python -c 'import function; function.quanly_file_lop()'")
+    flash("📁 Đã xử lý file danh sách lớp.")
+    return redirect(url_for('home'))
+
+@app.route('/thongke_chitiet')
+def thongke_chitiet():
     os.system("python thongke.py")
+    return redirect(url_for('home'))
 
-def thongke_theo_ngay():
+@app.route('/thongke_ngay')
+def thongke_ngay():
     os.system("python thongke_tungngay.py")
+    return redirect(url_for('home'))
 
+@app.route('/thongke_nhieu_ngay')
 def thongke_nhieu_ngay():
     os.system("python thongke_nhieungay.py")
+    return redirect(url_for('home'))
 
-# Giao diện chính
-root = tk.Tk()
-root.title("📘 Phần mềm quản lý điểm danh Khuôn mặt")
-root.geometry("500x450")
-root.resizable(False, False)
 
-label = tk.Label(root, text="MENU QUẢN LÝ", font=("Arial", 14, "bold"))
-label.pack(pady=10)
-
-btns = [
-    ("1. Lấy dữ liệu khuôn mặt", laydulieu_khuonmat),
-    ("2. Train dữ liệu khuôn mặt (xoá model cũ)", train_khuonmat),
-    ("3. Điểm danh sinh viên", diemdanh_sinhvien),
-    ("4. Xem/Thêm file danh sách sinh viên", quanly_file_lop),
-    ("5. Thống kê chi tiết sinh viên", thongke_chitiet_sinhvien),
-    ("6. Thống kê điểm danh theo ngày", thongke_theo_ngay),
-    ("7. Thống kê điểm danh nhiều ngày", thongke_nhieu_ngay),
-    ("Thoát", root.quit)
-]
-
-for text, func in btns:
-    tk.Button(root, text=text, width=40, height=2, command=func).pack(pady=5)
-
-root.mainloop()
+# ---------- CHẠY ỨNG DỤNG ----------
+if __name__ == '__main__':
+    app.run(debug=True)

@@ -113,30 +113,96 @@ def AddData(mssv, hoten, ngaysinh, gioitinh, malop):
     conn.commit()
     conn.close()
 
-if __name__ == "__main__":
-    # --- Hỏi người dùng chọn 1 hoặc 2 ---
-    lua_chon = input('Bạn đã nhập thông tin trước đó chưa?\n1. Rồi\n2. Chưa\nChọn (1/2): ').strip()
+# if __name__ == "__main__":
+#     # --- Hỏi người dùng chọn 1 hoặc 2 ---
+#     lua_chon = input('Bạn đã nhập thông tin trước đó chưa?\n1. Rồi\n2. Chưa\nChọn (1/2): ').strip()
 
-    if lua_chon == '2':
-        # Nhập thông tin sinh viên
-        mssv = input('MSSV: ')
-        hoten = input('Họ tên: ')
-        malop = input('Mã lớp: ')
-        ngaysinh = input('Ngày sinh: ')
-        gioitinh = input('Giới tính: ')
+#     if lua_chon == '2':
+#         # Nhập thông tin sinh viên
+#         mssv = input('MSSV: ')
+#         hoten = input('Họ tên: ')
+#         malop = input('Mã lớp: ')
+#         ngaysinh = input('Ngày sinh: ')
+#         gioitinh = input('Giới tính: ')
 
-        hoten_filename = unidecode(hoten).replace(" ", "")
-        AddData(mssv, hoten, ngaysinh, gioitinh, malop)
+#         hoten_filename = unidecode(hoten).replace(" ", "")
+#         AddData(mssv, hoten, ngaysinh, gioitinh, malop)
 
-        # Xóa dữ liệu ảnh cũ (cả local và Google Drive)
-        parent_folder_id = '1N1OTsq8waQurLzCNG6ZikzO-7x4yScwe'
-        delete_old_folders(mssv, parent_folder_id)
-        delete_local_images(mssv)
+#         # Xóa dữ liệu ảnh cũ (cả local và Google Drive)
+#         parent_folder_id = '1N1OTsq8waQurLzCNG6ZikzO-7x4yScwe'
+#         delete_old_folders(mssv, parent_folder_id)
+#         delete_local_images(mssv)
 
-    elif lua_chon == '1':
-        mssv = input('MSSV: ')
+#     elif lua_chon == '1':
+#         mssv = input('MSSV: ')
 
-        # Tự động lấy họ tên từ CSDL
+#         # Tự động lấy họ tên từ CSDL
+#         conn = sqlite3.connect('../db/attendance.db')
+#         cursor = conn.cursor()
+#         cursor.execute("SELECT hoten FROM sinhvien WHERE mssv = ?", (mssv,))
+#         result = cursor.fetchone()
+#         conn.close()
+
+#         if result:
+#             hoten = result[0]
+#             print(f"✅ Đã tìm thấy tên sinh viên: {hoten}")
+#         else:
+#             print("❌ MSSV không tồn tại trong cơ sở dữ liệu.")
+#             exit()
+
+#         hoten_filename = unidecode(hoten).replace(" ", "")
+
+
+#         # Xóa dữ liệu ảnh cũ (cả local và Google Drive)
+#         parent_folder_id = '1N1OTsq8waQurLzCNG6ZikzO-7x4yScwe'
+#         delete_old_folders(mssv, parent_folder_id)
+#         delete_local_images(mssv)
+
+#     else:
+#         print("Chỉ được chọn 1 hoặc 2 thôi bạn ơi.")
+#         exit()
+
+#     # Tạo thư mục mới để upload ảnh lần này
+#     today_str = datetime.now().strftime('%d-%m-%Y')
+#     folder_name = f"{hoten_filename}.{mssv}-{today_str}"
+#     sub_folder_id = create_upload_folder(folder_name, parent_folder_id)
+
+#     # --- Camera nhận diện và lưu ảnh ---
+#     cam = cv2.VideoCapture(0)
+#     detector = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+
+#     lap = 0
+
+#     while True:
+#         ret, img = cam.read()
+#         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+#         faces = detector.detectMultiScale(gray, 1.3, 5)
+
+#         for (x, y, w, h) in faces:
+#             cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+#             lap += 1
+
+#             filename = f"{hoten_filename}.{mssv}.{lap}.jpg"
+#             filepath = f"luu/{filename}"
+#             cv2.imwrite(filepath, gray[y:y+h, x:x+w])
+
+#             threaded_upload(filepath, filename, sub_folder_id)
+
+#         cv2.imshow('frame', img)
+
+#         if cv2.waitKey(100) & 0xFF == ord('q'):
+#             break
+#         elif lap >= 40:
+#             break
+
+#     cam.release()
+#     cv2.destroyAllWindows()
+
+#     print("\nĐã lấy dữ liệu khuôn mặt thành công!")
+
+def handle_face_capture(mssv, hoten=None, ngaysinh=None, gioitinh=None, malop=None):
+    if hoten is None:
+        # Trường hợp đã có thông tin
         conn = sqlite3.connect('../db/attendance.db')
         cursor = conn.cursor()
         cursor.execute("SELECT hoten FROM sinhvien WHERE mssv = ?", (mssv,))
@@ -145,32 +211,27 @@ if __name__ == "__main__":
 
         if result:
             hoten = result[0]
-            print(f"✅ Đã tìm thấy tên sinh viên: {hoten}")
         else:
-            print("❌ MSSV không tồn tại trong cơ sở dữ liệu.")
-            exit()
-
-        hoten_filename = unidecode(hoten).replace(" ", "")
-
-
-        # Xóa dữ liệu ảnh cũ (cả local và Google Drive)
-        parent_folder_id = '1N1OTsq8waQurLzCNG6ZikzO-7x4yScwe'
-        delete_old_folders(mssv, parent_folder_id)
-        delete_local_images(mssv)
-
+            raise ValueError("❌ MSSV không tồn tại trong cơ sở dữ liệu.")
     else:
-        print("Chỉ được chọn 1 hoặc 2 thôi bạn ơi.")
-        exit()
+        # Trường hợp chưa có, cần ghi vào DB
+        AddData(mssv, hoten, ngaysinh, gioitinh, malop)
 
-    # Tạo thư mục mới để upload ảnh lần này
+    hoten_filename = unidecode(hoten).replace(" ", "")
+
+    # Xoá ảnh cũ
+    parent_folder_id = '1N1OTsq8waQurLzCNG6ZikzO-7x4yScwe'
+    delete_old_folders(mssv, parent_folder_id)
+    delete_local_images(mssv)
+
+    # Tạo thư mục mới để upload
     today_str = datetime.now().strftime('%d-%m-%Y')
     folder_name = f"{hoten_filename}.{mssv}-{today_str}"
     sub_folder_id = create_upload_folder(folder_name, parent_folder_id)
 
-    # --- Camera nhận diện và lưu ảnh ---
+    # Mở camera
     cam = cv2.VideoCapture(0)
     detector = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-
     lap = 0
 
     while True:
@@ -181,11 +242,9 @@ if __name__ == "__main__":
         for (x, y, w, h) in faces:
             cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
             lap += 1
-
             filename = f"{hoten_filename}.{mssv}.{lap}.jpg"
-            filepath = f"luu/{filename}"
+            filepath = os.path.join('luu', filename)
             cv2.imwrite(filepath, gray[y:y+h, x:x+w])
-
             threaded_upload(filepath, filename, sub_folder_id)
 
         cv2.imshow('frame', img)
@@ -198,4 +257,5 @@ if __name__ == "__main__":
     cam.release()
     cv2.destroyAllWindows()
 
-    print("\nĐã lấy dữ liệu khuôn mặt thành công!")
+    print("✅ Đã lấy dữ liệu khuôn mặt thành công.")
+
