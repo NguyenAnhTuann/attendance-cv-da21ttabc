@@ -161,7 +161,7 @@ class ThongKeNhieuNgayWindow(customtkinter.CTkToplevel):
             totals_row += ["", ""]
             df_output.loc['Tổng kết'] = totals_row
 
-            with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
+            with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer: # type: ignore
                 df_output.to_excel(writer, sheet_name="ThongKeTongHop", index=False, startrow=3)
                 workbook = writer.book
                 worksheet = writer.sheets["ThongKeTongHop"]
@@ -172,7 +172,7 @@ class ThongKeNhieuNgayWindow(customtkinter.CTkToplevel):
                 worksheet.write("A1", f"📘 Môn học: {monhoc}")
                 worksheet.write("A2", f"📆 Tổng số ngày học đã điểm danh: {len(ngayhoc_list)}")
             
-            self.after(100, lambda: messagebox.showinfo("Thành công", f"Đã xuất báo cáo tổng hợp thành công!\nFile được lưu tại: {output_path}"))
+            self.after(100, lambda: messagebox.showinfo("Thành công", f"Đã xuất báo cáo tổng hợp thành công!\nFile được lưu tại: {output_path}")) # type: ignore
 
         except Exception as e:
             self.after(100, lambda: messagebox.showerror("Lỗi", f"Xuất file thất bại: {e}"))
