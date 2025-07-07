@@ -1,3 +1,15 @@
-src/credentials.json
-src/token.pickle
-src/luu
+# File chứa khóa bí mật của Google
+token.pickle
+
+# File model đã huấn luyện (quá lớn)
+model.yml
+
+# File database (không nên đưa lên Git)
+db/attendance.db
+
+# Các file ảnh đã lấy mẫu (không nên đưa lên Git)
+src/luu/
+
+# Các file tạm của Python
+__pycache__/
+*.pyc
