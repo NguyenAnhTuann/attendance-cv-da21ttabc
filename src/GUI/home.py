@@ -342,7 +342,7 @@ class ThongKeNhieuNgayView(customtkinter.CTkFrame):
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
-        self.title("Phần Mềm Điểm Danh Sinh Viên TVU"); self.geometry("1200x720"); self.resizable(True, True); self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.state('zoomed'); self.title("Phần Mềm Điểm Danh Sinh Viên TVU"); self.geometry("1200x720"); self.resizable(True, True); self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.cap = None; self.detector = None; self.is_capturing = False; self.is_training = False; self.capture_thread = None; self.training_thread = None; self.student_info = {}
         self.db_path = os.path.join(ROOT_DIR, 'db', 'attendance.db'); self.cascade_path = os.path.join(ROOT_DIR, 'src', 'haarcascade_frontalface_default.xml'); self.save_image_dir = os.path.join(ROOT_DIR, 'src', 'luu'); self.token_path = os.path.join(ROOT_DIR, 'token.pickle'); self.credentials_path = os.path.join(ROOT_DIR, 'src', 'credentials.json'); self.model_path = os.path.join(ROOT_DIR, "model.yml"); self.label_map_path = os.path.join(ROOT_DIR, "label_map.json")
         self.grid_columnconfigure(0, weight=1); self.grid_columnconfigure(1, weight=3); self.grid_rowconfigure(0, weight=1)
@@ -355,7 +355,7 @@ class App(customtkinter.CTk):
         self.quanly_file_lop_view = QuanLyFileLopView(self.main_content_frame, fg_color="transparent")
         self.thongke_canhan_view = ThongKeCaNhanView(self.main_content_frame, fg_color="transparent")
         self.thongke_theongay_view = ThongKeTheoNgayView(self.main_content_frame, fg_color="transparent")
-        self.thongke_nhieungay_view = ThongKeNhieuNgayView(self.main_content_frame, fg_color="transparent") # <-- TẠO VIEW MỚI
+        self.thongke_nhieungay_view = ThongKeNhieuNgayView(self.main_content_frame, fg_color="transparent")
 
         # --- Đặt các khung chồng lên nhau ---
         self.get_data_view.grid(row=0, column=0, sticky="nsew")
@@ -383,6 +383,16 @@ class App(customtkinter.CTk):
         for text, command in buttons_config.items():
             fg_color = "#4CAF50" if "Điểm Danh" in text else ("#3B8ED0", "#1F6AA5"); hover_color = "#45a049" if "Điểm Danh" in text else ("#36719F", "#144870")
             button = customtkinter.CTkButton(parent_frame, text=text, command=command, height=40, fg_color=fg_color, hover_color=hover_color); button.pack(pady=7, padx=20, fill="x")
+
+        exit_button = customtkinter.CTkButton(
+            parent_frame, 
+            text="THOÁT", 
+            command=self.on_closing, 
+            height=40, 
+            fg_color=("#D35B58", "#C75450"), 
+            hover_color=("#E57373", "#D32F2F")
+        )
+        exit_button.pack(pady=(15, 7), padx=20, fill="x", side="bottom")
 
     def show_view(self, view_name):
         # --- Cập nhật logic chuyển view ---
@@ -412,16 +422,16 @@ class App(customtkinter.CTk):
             label = customtkinter.CTkLabel(control_frame, text=label_text); label.pack(padx=20, pady=(10, 0), anchor="w")
             entry = customtkinter.CTkEntry(control_frame); entry.pack(padx=20, pady=5, fill="x"); setattr(self, attr_name, entry)
         self.entry_id.bind("<FocusOut>", self.check_student_db); self.entry_id.bind("<Return>", self.check_student_db)
-        self.capture_button = customtkinter.CTkButton(control_frame, text="Bắt Đầu Chụp", command=self.start_capture_thread, height=40); self.capture_button.pack(padx=20, pady=20, fill="x")
+        self.capture_button = customtkinter.CTkButton(control_frame, text="Bắt đầu lấy dữ liệu", command=self.start_capture_thread, height=40); self.capture_button.pack(padx=20, pady=20, fill="x")
         self.status_label = customtkinter.CTkLabel(control_frame, text="Trạng thái: Sẵn sàng", text_color="red"); self.status_label.pack(padx=20, pady=10)
         camera_frame = customtkinter.CTkFrame(parent_frame, corner_radius=10); camera_frame.grid(row=0, column=1, padx=(0, 10), pady=10, sticky="nsew")
         self.camera_label = customtkinter.CTkLabel(camera_frame, text=""); self.camera_label.pack(padx=10, pady=10, fill="both", expand=True)
 
     def setup_train_data_ui(self, parent_frame):
-        title_label = customtkinter.CTkLabel(parent_frame, text="Tiến Trình Huấn Luyện", font=customtkinter.CTkFont(size=18, weight="bold")); title_label.pack(pady=20, padx=20)
+        title_label = customtkinter.CTkLabel(parent_frame, text="Tiến trình huấn luyện", font=customtkinter.CTkFont(size=18, weight="bold")); title_label.pack(pady=20, padx=20)
         self.train_log_textbox = customtkinter.CTkTextbox(parent_frame, height=200, corner_radius=10, state="disabled"); self.train_log_textbox.pack(pady=10, padx=20, fill="both", expand=True)
         self.train_progressbar = customtkinter.CTkProgressBar(parent_frame, corner_radius=10); self.train_progressbar.pack(pady=10, padx=20, fill="x"); self.train_progressbar.set(0)
-        self.train_start_button = customtkinter.CTkButton(parent_frame, text="Bắt Đầu Huấn Luyện", command=self.start_training_thread, height=40); self.train_start_button.pack(pady=20, padx=20, fill="x")
+        self.train_start_button = customtkinter.CTkButton(parent_frame, text="Bắt đầu huấn luyện", command=self.start_training_thread, height=40); self.train_start_button.pack(pady=20, padx=20, fill="x")
 
     def start_camera(self):
         if self.cap is None:
@@ -462,7 +472,7 @@ class App(customtkinter.CTk):
         self.student_info = { "mssv": self.entry_id.get().strip(), "hoten": self.entry_name.get().strip(), "ngaysinh": self.entry_dob.get().strip(), "gioitinh": self.entry_gender.get().strip(), "malop": self.entry_class_id.get().strip() }
         if not self.student_info["mssv"] or not self.student_info["hoten"]: messagebox.showwarning("Thiếu thông tin", "Vui lòng nhập ít nhất Mã số và Họ tên sinh viên."); return
         if self.is_capturing: messagebox.showwarning("Đang bận", "Hệ thống đang trong quá trình chụp."); return
-        self.capture_button.configure(state="disabled", text="Đang chụp..."); self.is_capturing = True; self.capture_thread = threading.Thread(target=self.handle_face_capture_logic); self.capture_thread.daemon = True; self.capture_thread.start()
+        self.capture_button.configure(state="disabled", text="Đang quét khuôn mặt..."); self.is_capturing = True; self.capture_thread = threading.Thread(target=self.handle_face_capture_logic); self.capture_thread.daemon = True; self.capture_thread.start()
 
     def handle_face_capture_logic(self):
         try:
@@ -483,7 +493,7 @@ class App(customtkinter.CTk):
             if lap > 0: self.after(100, lambda: messagebox.showinfo("Hoàn thành", f"Đã chụp thành công {lap} ảnh."))
             else: self.after(100, lambda: messagebox.showwarning("Không thành công", "Không chụp được ảnh nào."))
         except Exception as e: self.after(100, lambda: messagebox.showerror("Lỗi", f"Đã xảy ra lỗi trong quá trình chụp: {e}"))
-        finally: self.is_capturing = False; self.capture_button.configure(state="normal", text="Bắt Đầu Chụp"); self.status_label.configure(text="Trạng thái: Sẵn sàng", text_color="red")
+        finally: self.is_capturing = False; self.capture_button.configure(state="normal", text="Bắt đầu lấy dữ liệu"); self.status_label.configure(text="Trạng thái: Sẵn sàng", text_color="red")
 
     def start_training_thread(self):
         if self.is_training: messagebox.showwarning("Đang bận", "Quá trình huấn luyện đang diễn ra."); return

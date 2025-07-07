@@ -74,17 +74,15 @@ class DiemDanhWindow(customtkinter.CTkToplevel):
         log_title = customtkinter.CTkLabel(self.control_frame, text="Nhật Ký Điểm Danh", font=customtkinter.CTkFont(size=16, weight="bold")); log_title.pack(pady=10)
         self.log_textbox = customtkinter.CTkTextbox(self.control_frame, corner_radius=10, state="disabled"); self.log_textbox.pack(pady=10, padx=10, fill="both", expand=True)
         
-        # --- THÊM MỚI: Nút đóng cửa sổ (Sử dụng .pack để không đổi cấu trúc) ---
         self.close_button = customtkinter.CTkButton(
             self.control_frame,
-            text="Đóng Cửa Sổ",
+            text="KẾT THÚC ĐIỂM DANH",
             command=self.on_closing,
             height=40,
-            fg_color=("#D35B58", "#C75450"), # Một màu đỏ nhạt
+            fg_color=("#D35B58", "#C75450"),
             hover_color=("#E57373", "#D32F2F")
         )
-        self.close_button.pack(pady=(10, 10), padx=10, fill="x", side="bottom") # Đặt ở dưới cùng
-        # --- KẾT THÚC THÊM MỚI ---
+        self.close_button.pack(pady=(10, 10), padx=10, fill="x", side="bottom")
 
         self.camera_frame = customtkinter.CTkFrame(self, corner_radius=10); self.camera_frame.grid(row=0, column=1, padx=(0, 20), pady=20, sticky="nsew")
         self.camera_label = customtkinter.CTkLabel(self.camera_frame, text="Camera sẽ hiển thị ở đây\nVui lòng cấu hình và nhấn 'Bắt đầu'"); self.camera_label.pack(padx=10, pady=10, fill="both", expand=True)
