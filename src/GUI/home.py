@@ -1,5 +1,3 @@
-# GUI/home.py (Phiên bản Dashboard, tích hợp toàn bộ chức năng)
-
 import sys
 import os
 import threading
@@ -18,18 +16,30 @@ from PIL import Image
 import cv2
 import numpy as np
 import pandas as pd
-from googleapiclient.discovery import build # type: ignore
-from google_auth_oauthlib.flow import InstalledAppFlow # type: ignore
-from google.auth.transport.requests import Request # type: ignore
-from googleapiclient.http import MediaFileUpload # type: ignore
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from googleapiclient.http import MediaFileUpload
 from unidecode import unidecode
+
+import smtplib
+import ssl
+import random
+from email.message import EmailMessage
+import queue
+from datetime import datetime
+
+
+# --- CẤU HÌNH XÁC THỰC EMAIL ---
+ADMIN_EMAIL = "nguyenanhtuan.profile@gmail.com"
+SENDER_EMAIL = "websitemuontrasachthuvientvu@gmail.com"
+SENDER_APP_PASSWORD = "jesb oiyv hmrf buwe"
 
 # --- Thiết lập đường dẫn ---
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(ROOT_DIR)
 
 # --- Import các cửa sổ con còn lại ---
-# Chỉ còn lại cửa sổ Điểm danh là Toplevel
 from src.GUI.diemdanh import DiemDanhWindow
 
 customtkinter.set_appearance_mode("System")
@@ -47,9 +57,7 @@ class TextboxRedirector:
     def flush(self):
         pass
 
-# ===================================================================
 # SECTION: KHUNG NHÌN QUẢN LÝ FILE LỚP
-# ===================================================================
 class QuanLyFileLopView(customtkinter.CTkFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
@@ -93,9 +101,7 @@ class QuanLyFileLopView(customtkinter.CTkFrame):
         try: os.remove(os.path.join(self.data_dir, filename_to_delete)); messagebox.showinfo("Thành công", f"Đã xóa file '{filename_to_delete}' thành công."); self.refresh_file_list()
         except Exception as e: messagebox.showerror("Lỗi", f"Không thể xóa file: {e}")
 
-# ===================================================================
 # SECTION: KHUNG NHÌN THỐNG KÊ CÁ NHÂN
-# ===================================================================
 class ThongKeCaNhanView(customtkinter.CTkFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
@@ -169,9 +175,7 @@ class ThongKeCaNhanView(customtkinter.CTkFrame):
         text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8')
         return re.sub(r'[\s/\\:*?"<>|]+', '', text).lower()
 
-# ===================================================================
 # SECTION: KHUNG NHÌN THỐNG KÊ THEO NGÀY
-# ===================================================================
 class ThongKeTheoNgayView(customtkinter.CTkFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
@@ -248,9 +252,7 @@ class ThongKeTheoNgayView(customtkinter.CTkFrame):
         text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8')
         return re.sub(r'[\s/\\:*?"<>|]+', '', text).lower()
 
-# ===================================================================
 # SECTION: KHUNG NHÌN THỐNG KÊ NHIỀU NGÀY
-# ===================================================================
 class ThongKeNhieuNgayView(customtkinter.CTkFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
@@ -269,7 +271,7 @@ class ThongKeNhieuNgayView(customtkinter.CTkFrame):
         label_monhoc.pack(anchor="w", padx=20, pady=(10,0))
         self.combo_monhoc = customtkinter.CTkComboBox(self.main_frame, values=[], state="disabled")
         self.combo_monhoc.pack(fill="x", padx=20, pady=5)
-        self.export_button = customtkinter.CTkButton(self.main_frame, text="Xuất Báo Cáo Tổng Hợp", command=self.start_export_thread, height=40, state="disabled")
+        self.export_button = customtkinter.CTkButton(self.main_frame, text="Xuất thống kê tổng hợp", command=self.start_export_thread, height=40, state="disabled")
         self.export_button.pack(fill="x", padx=20, pady=20)
 
     def update_view_data(self):
@@ -336,9 +338,155 @@ class ThongKeNhieuNgayView(customtkinter.CTkFrame):
         text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8')
         return re.sub(r'[\s/\\:*?"<>|]+', '', text).lower()
 
-# ===================================================================
+
+# SECTION: CỬA SỔ XÁC THỰC OTP
+class AuthWindow(customtkinter.CTkToplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.master = master
+        self.title("Xác thực")
+        self.geometry("400x250")
+        self.resizable(False, False)
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.lift()
+        self.focus_force()
+
+        self.otp_code = str(random.randint(100000, 999999))
+        self.is_verified = False
+
+        self.main_frame = customtkinter.CTkFrame(self)
+        self.main_frame.pack(pady=20, padx=20, fill="both", expand=True)
+
+        self.label = customtkinter.CTkLabel(self.main_frame, text="Một mã xác thực đã được gửi đến email của bạn.", wraplength=300)
+        self.label.pack(pady=(10, 5))
+
+        self.entry_otp = customtkinter.CTkEntry(self.main_frame, placeholder_text="Nhập mã 6 số", width=200, justify='center')
+        self.entry_otp.pack(pady=10)
+        self.entry_otp.bind("<Return>", self.verify_otp)
+
+        self.verify_button = customtkinter.CTkButton(self.main_frame, text="Xác nhận", command=self.verify_otp)
+        self.verify_button.pack(pady=10)
+
+        self.status_label = customtkinter.CTkLabel(self.main_frame, text="Đang gửi mã...", text_color="grey")
+        self.status_label.pack(pady=5)
+        
+        # Tạo queue để giao tiếp giữa các luồng
+        self.gui_queue = queue.Queue()
+
+        # Bắt đầu luồng gửi email và truyền queue vào
+        thread = threading.Thread(target=self.send_auth_email, args=(self.gui_queue,))
+        thread.daemon = True
+        thread.start()
+
+        # Bắt đầu hàm kiểm tra queue
+        self.process_queue()
+
+    def process_queue(self):
+        try:
+            # Lấy thông điệp từ queue mà không bị block
+            message = self.gui_queue.get_nowait()
+            
+            # Xử lý thông điệp
+            msg_type, data = message
+            if msg_type == "SUCCESS":
+                self.status_label.configure(text=data, text_color="green")
+            elif msg_type == "ERROR":
+                self.status_label.configure(text="Lỗi! Không thể gửi email.", text_color="red")
+                messagebox.showerror("Lỗi Email", data)
+
+        except queue.Empty:
+            # Nếu queue rỗng, không làm gì cả
+            pass
+        finally:
+            # Lên lịch để chạy lại hàm này sau 100ms
+            if self.winfo_exists():
+                self.after(100, self.process_queue)
+
+    # BẮT ĐẦU THAY THẾ TỪ ĐÂY
+    def send_auth_email(self, q):
+        """
+        """
+        # Lấy năm hiện tại cho phần footer của email
+        current_year = datetime.now().year
+
+        # --- Mẫu HTML theo phong cách "Glassmorphism" ---
+        html_body = f"""
+        <!DOCTYPE html>
+        <html lang="vi">
+        <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Xác thực sử dụng phần mềm</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; margin: 0; padding: 40px 20px; background-color: #6d5b97; background-image: linear-gradient(to right top, #6d5b97, #7e6ba8, #8f7cb9, #a08dca, #b29edb); background-attachment: fixed;">
+            <div style="max-width: 580px; margin: auto; border-radius: 12px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);">
+                <div style="padding: 30px 40px; color: #333;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <h1 style="font-size: 26px; font-weight: 700; color: #1e1e1e; margin: 0;">TVU</h1>
+                        <p style="font-size: 16px; color: #555; margin-top: 5px;">Xác thực đăng nhập an toàn</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <p style="font-size: 18px; color: #444;">Mã xác thực của bạn là:</p>
+                        <p style="font-size: 48px; font-weight: bold; letter-spacing: 8px; margin: 10px 0; color: #2c3e50; background-color: rgba(255, 255, 255, 0.7); padding: 15px; border-radius: 8px;">
+                            {self.otp_code}
+                        </p>
+                        <p style="font-size: 14px; color: #555; margin-top: 20px;">Mã này có hiệu lực trong vòng 10 phút.</p>
+                    </div>
+                    <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.5); margin: 30px 0;" />
+                    <p style="font-size: 12px; color: #555; text-align: center;">Nếu bạn không yêu cầu mã này, bạn có thể bỏ qua email này một cách an toàn. Vui lòng không chia sẻ mã này với bất kỳ ai.</p>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px; font-size: 12px; color: rgba(255, 255, 255, 0.8);">
+                <p>&copy; {current_year} Phần mềm điểm danh TVU - Trà Vinh</p>
+            </div>
+        </body>
+        </html>
+        """
+
+        try:
+            msg = EmailMessage()
+            msg['Subject'] = f'Mã xác thực sử dụng phần mềm'
+            msg['From'] = f"Phần mềm điểm danh TVU <{SENDER_EMAIL}>" 
+            msg['To'] = ADMIN_EMAIL
+
+            # Thiết lập nội dung văn bản thuần túy (dành cho các trình duyệt mail cũ)
+            plain_text_content = f"Mã xác thực của bạn là: {self.otp_code}"
+            msg.set_content(plain_text_content)
+
+            # Thêm phiên bản HTML
+            msg.add_alternative(html_body, subtype='html')
+            
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+                smtp.login(SENDER_EMAIL, SENDER_APP_PASSWORD)
+                smtp.send_message(msg)
+            
+            # Gửi thông báo thành công vào queue
+            q.put(("SUCCESS", "Gửi mã thành công!"))
+
+        except Exception as e:
+            # Gửi thông báo lỗi vào queue
+            error_details = f"Không thể gửi mã xác thực. Vui lòng kiểm tra lại cấu hình email và kết nối mạng.\n\nChi tiết: {e}"
+            q.put(("ERROR", error_details))
+
+    def verify_otp(self, event=None):
+        entered_code = self.entry_otp.get().strip()
+        if entered_code == self.otp_code:
+            self.status_label.configure(text="Xác thực thành công!", text_color="green")
+            self.is_verified = True
+            self.after(500, self.destroy)
+        else:
+            self.status_label.configure(text="Sai mã! Vui lòng thử lại.", text_color="red")
+            self.entry_otp.delete(0, "end")
+
+    def on_closing(self):
+        if not self.is_verified:
+            if messagebox.askyesno("Thoát", "Bạn có chắc muốn thoát chương trình?"):
+                self.master.destroy()
+        else:
+            self.destroy()
+
 # SECTION: LỚP ỨNG DỤNG CHÍNH
-# ===================================================================
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
@@ -363,7 +511,7 @@ class App(customtkinter.CTk):
         self.quanly_file_lop_view.grid(row=0, column=0, sticky="nsew")
         self.thongke_canhan_view.grid(row=0, column=0, sticky="nsew")
         self.thongke_theongay_view.grid(row=0, column=0, sticky="nsew")
-        self.thongke_nhieungay_view.grid(row=0, column=0, sticky="nsew") # <-- GRID VIEW MỚI
+        self.thongke_nhieungay_view.grid(row=0, column=0, sticky="nsew")
 
         self.setup_get_data_ui(self.get_data_view)
         self.setup_train_data_ui(self.train_data_view)
@@ -372,16 +520,16 @@ class App(customtkinter.CTk):
     def setup_menu_buttons(self, parent_frame):
         title_label = customtkinter.CTkLabel(parent_frame, text="CHỨC NĂNG", font=customtkinter.CTkFont(size=20, weight="bold")); title_label.pack(pady=15)
         buttons_config = {
-            "1. Lấy Dữ Liệu Khuôn Mặt": lambda: self.show_view("get_data"),
-            "2. Train Dữ Liệu Khuôn Mặt": lambda: self.show_view("train_data"),
-            "3. Bắt Đầu Điểm Danh": self.open_diemdanh_window,
-            "4. Quản Lý File Lớp": lambda: self.show_view("quanly_file_lop"),
-            "5. Thống Kê Chi Tiết": lambda: self.show_view("thongke_canhan"),
-            "6. Thống Kê Theo Ngày": lambda: self.show_view("thongke_theongay"),
-            "7. Thống Kê Nhiều Ngày": lambda: self.show_view("thongke_nhieungay") # <-- SỬA Ở ĐÂY
+            "1. Thu thập dữ liệu": lambda: self.show_view("get_data"),
+            "2. Huấn luyện dữ liệu": lambda: self.show_view("train_data"),
+            "3. Tiến hành điểm danh": self.open_diemdanh_window,
+            "4. Quản lý danh sách lớp": lambda: self.show_view("quanly_file_lop"),
+            "5. Thống kê chi tiết": lambda: self.show_view("thongke_canhan"),
+            "6. Thống kê theo ngày": lambda: self.show_view("thongke_theongay"),
+            "7. Thống kê tổng hợp": lambda: self.show_view("thongke_nhieungay")
         }
         for text, command in buttons_config.items():
-            fg_color = "#4CAF50" if "Điểm Danh" in text else ("#3B8ED0", "#1F6AA5"); hover_color = "#45a049" if "Điểm Danh" in text else ("#36719F", "#144870")
+            fg_color = "#4CAF50" if "Điểm danh" in text else ("#3B8ED0", "#1F6AA5"); hover_color = "#45a049" if "Điểm danh" in text else ("#36719F", "#144870")
             button = customtkinter.CTkButton(parent_frame, text=text, command=command, height=40, fg_color=fg_color, hover_color=hover_color); button.pack(pady=7, padx=20, fill="x")
 
         exit_button = customtkinter.CTkButton(
@@ -412,7 +560,6 @@ class App(customtkinter.CTk):
         elif view_name == "thongke_nhieungay": self.thongke_nhieungay_view.grid(); self.thongke_nhieungay_view.update_view_data() # <-- HIỂN THỊ VIEW MỚI
 
     # ... (Toàn bộ các hàm logic khác giữ nguyên) ...
-    # --- BẮT ĐẦU PHẦN GIỮ NGUYÊN ---
     def setup_get_data_ui(self, parent_frame):
         parent_frame.grid_columnconfigure(0, weight=1); parent_frame.grid_columnconfigure(1, weight=2); parent_frame.grid_rowconfigure(0, weight=1)
         control_frame = customtkinter.CTkFrame(parent_frame, corner_radius=10); control_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
@@ -465,7 +612,7 @@ class App(customtkinter.CTk):
             for attr_name in ["entry_name", "entry_dob", "entry_gender", "entry_class_id"]: getattr(self, attr_name).delete(0, 'end')
             if result:
                 self.entry_name.insert(0, result[0] or ""); self.entry_dob.insert(0, result[1] or ""); self.entry_gender.insert(0, result[2] or ""); self.entry_class_id.insert(0, result[3] or ""); self.status_label.configure(text=f"Đã tìm thấy SV: {result[0]}", text_color="blue")
-            else: self.status_label.configure(text="Không tìm thấy SV, sẵn sàng nhập mới.", text_color="red")
+            else: self.status_label.configure(text="Không tìm thấy sinh viên, sẵn sàng nhập mới.", text_color="red")
         except Exception as e: messagebox.showerror("Lỗi DB", f"Không thể truy vấn cơ sở dữ liệu: {e}")
 
     def start_capture_thread(self):
@@ -577,6 +724,23 @@ class App(customtkinter.CTk):
     def open_diemdanh_window(self):
         if not self.check_other_windows(): DiemDanhWindow(self)
     
+# if __name__ == "__main__":
+#     app = App()
+#     app.mainloop()
+
+# THAY THẾ BẰNG ĐOẠN NÀY
 if __name__ == "__main__":
-    app = App()
-    app.mainloop()
+    # --- Luồng khởi động mới ---
+    root = customtkinter.CTk()
+    root.withdraw()  # Ẩn cửa sổ gốc tạm thời
+
+    auth_dialog = AuthWindow(root)
+    root.wait_window(auth_dialog)  # Chờ cho đến khi cửa sổ xác thực đóng lại
+
+    if auth_dialog.is_verified:
+        root.destroy()  # Hủy cửa sổ gốc không dùng đến
+        app = App()
+        app.mainloop()
+    else:
+        root.destroy() # Nếu người dùng đóng cửa sổ xác thực, hủy và thoát
+        sys.exit()
